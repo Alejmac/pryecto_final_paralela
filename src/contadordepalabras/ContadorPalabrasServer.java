@@ -11,16 +11,16 @@ package contadordepalabras;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
+
 public class ContadorPalabrasServer {
     public static void main(String[] args) {
         try {
             ContadorPalabrasService contadorPalabrasService = new ContadorPalabrasServiceImpl();
             Registry registry = LocateRegistry.createRegistry(1099);
-            registry.bind("ContadorPalabrasService", contadorPalabrasService);
+            registry.rebind("ContadorPalabrasService", contadorPalabrasService);
             System.out.println("Servidor RMI listo.");
         } catch (Exception e) {
             System.err.println("Error en el servidor RMI: " + e.toString());
         }
     }
 }
-

@@ -54,14 +54,16 @@ public class vista extends javax.swing.JFrame {
      
    public void contarPalabrasRMI() {
     try {
-        String texto = txaPrincipal.getText();
+        String texto = this.txaPrincipal.getText();
 
         // Obtener el registro RMI en la máquina remota
         Registry registry = LocateRegistry.getRegistry("192.168.84.215", 1099);
 
         // Buscar el servicio de contador de palabras registrado en el registro RMI
         ContadorPalabrasService contadorPalabrasService = (ContadorPalabrasService) registry.lookup("ContadorPalabrasService");
-
+        // Añadir un mensaje de conexión del cliente
+        System.out.println("Se ha conectado el cliente");
+        
         long startTime = System.nanoTime();
         int cantidadPalabras = contadorPalabrasService.contarPalabras(texto);
         long endTime = System.nanoTime();
