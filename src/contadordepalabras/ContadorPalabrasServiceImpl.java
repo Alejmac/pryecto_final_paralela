@@ -8,92 +8,102 @@ package contadordepalabras;
  *
  * @author jorge
  */
- import java.rmi.RemoteException;
+import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
- import java.util.concurrent.ExecutorService;
+import java.text.DecimalFormat;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import javax.swing.JTextArea;
 
- public class ContadorPalabrasServiceImpl extends UnicastRemoteObject implements ContadorPalabrasService {
-    public ContadorPalabrasServiceImpl() throws RemoteException {
+public class ContadorPalabrasServiceImpl extends UnicastRemoteObject implements ContadorPalabrasService {
+    private JTextArea txaFinal;
+
+    public ContadorPalabrasServiceImpl(JTextArea txaFinal) throws RemoteException {
         super();
+        this.txaFinal = txaFinal;
     }
 
     @Override
     public int contarPalabras(String texto) throws RemoteException {
-        if (texto != null) {
-            int numThreads = Runtime.getRuntime().availableProcessors();
-            int chunkSize = texto.length() / numThreads;
+        String[] palabras = texto.split("\\s+");
 
-            ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
+        if (palabras.length > 1) {
+            long startTime = System.nanoTime();
 
-            int startIndex = 0;
-            int endIndex = chunkSize;
+            int numHilos = Math.min(8, palabras.length);
+            int palabrasPorHilo = (int) Math.ceil((double) palabras.length / numHilos);
 
-            List<Future<Integer>> results = new ArrayList<>();
+            ContadorPalabras contador = new ContadorPalabras();
 
-            // Crear y ejecutar las tareas para contar las palabras en paralelo
-            for (int i = 0; i < numThreads; i++) {
-                if (i == numThreads - 1) {
-                    // El último thread procesa el resto del texto
-                    endIndex = texto.length();
-                }
+            ExecutorService executor = Executors.newFixedThreadPool(numHilos);
+            for (int i = 0; i < numHilos; i++) {
+                int inicio = i * palabrasPorHilo;
+                int fin = Math.min((i + 1) * palabrasPorHilo, palabras.length);
 
-                String subText = texto.substring(startIndex, endIndex);
-                WordCountTask task = new WordCountTask(subText);
-                Future<Integer> result = executorService.submit(task);
-                results.add(result);
-
-                startIndex = endIndex;
-                endIndex += chunkSize;
+                Runnable worker = new ContarPalabrasWorker(palabras, contador, inicio, fin);
+                executor.execute(worker);
             }
 
-            executorService.shutdown();
-
+            executor.shutdown();
             try {
-                executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+                executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
-            int totalWords = 0;
+            int cantidadPalabras = contador.getCantidadPalabras();
 
-            // Obtener los resultados de las tareas completadas
-            for (Future<Integer> result : results) {
-                try {
-                    totalWords += result.get();
-                } catch (InterruptedException | ExecutionException e) {
-                    e.printStackTrace();
-                }
-            }
+            long endTime = System.nanoTime();
+            double tiempoEjecucion = (endTime - startTime) / 1_000_000.0;
 
-            return totalWords;
-        }
+            System.out.println("El tiempo de ejecución es: " + tiempoEjecucion + " ms");
+            txaFinal.setText("Cantidad de palabras: " + cantidadPalabras + "\n");
+            txaFinal.append("Tiempo de ejecución: " + tiempoEjecucion + " ms");
 
-        return 0;
-    }
-
-    private static class WordCountTask implements Callable<Integer> {
-        private String text;
-
-        public WordCountTask(String text) {
-            this.text = text;
-        }
-
-        @Override
-        public Integer call() throws Exception {
-            if (text != null) {
-                String[] words = text.trim().split("\\s+");
-                return words.length;
-            }
-
+            return cantidadPalabras;
+        } else {
             return 0;
         }
     }
+
+    private static class ContadorPalabras {
+        private int cantidadPalabras;
+        private Object lock = new Object();
+
+        public void incrementar() {
+            synchronized (lock) {
+                cantidadPalabras++;
+            }
+        }
+
+        public int getCantidadPalabras() {
+            return cantidadPalabras;
+        }
+    }
+
+    private static class ContarPalabrasWorker implements Runnable {
+        private String[] palabras;
+        private ContadorPalabras contador;
+        private int inicio;
+        private int fin;
+
+        public ContarPalabrasWorker(String[] palabras, ContadorPalabras contador, int inicio, int fin) {
+            this.palabras = palabras;
+            this.contador = contador;
+            this.inicio = inicio;
+            this.fin = fin;
+        }
+
+        @Override
+        public void run() {
+            for (int i = inicio; i < fin; i++) {
+                if (!palabras[i].isEmpty()) {
+                    contador.incrementar();
+                }
+            }
+        }
+    }
 }
+
 

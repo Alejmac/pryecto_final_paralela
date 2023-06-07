@@ -10,6 +10,7 @@ package contadordepalabras;
  */
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import javax.swing.JTextArea;
 
 public interface ContadorPalabrasService extends Remote {
     int contarPalabras(String texto) throws RemoteException;

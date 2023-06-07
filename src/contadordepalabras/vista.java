@@ -5,8 +5,7 @@
 package contadordepalabras;
  
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.text.DecimalFormat;
+import java.awt.event.ActionListener; 
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JTextArea;
@@ -23,6 +22,7 @@ public class vista extends javax.swing.JFrame {
     private JTextArea txaFinalSecuencial1;
     private CalculoConcurrente calculoConcurrente;
     private  JTextArea  txaFinalParalelo1  ; 
+    private String text;
 
 
     public vista(JTextArea txaPrincipal, JButton btnSecuencial, JTextArea txaFinalSecuencial,JTextArea txaFinalParalelo) {
@@ -54,29 +54,7 @@ public class vista extends javax.swing.JFrame {
         }
     }
      
-   public void contarPalabrasRMI() {
-    try {
-        String texto = this.txaPrincipal.getText();
-
-        // Obtener el registro RMI en la máquina remota
-        Registry registry = LocateRegistry.getRegistry("192.168.100.157", 1099);
-
-        // Buscar el servicio de contador de palabras registrado en el registro RMI
-        ContadorPalabrasService contadorPalabrasService = (ContadorPalabrasService) registry.lookup("ContadorPalabrasService");
-        clienteConectado = true;  // Actualizar el estado de conexión del cliente
-            System.out.println("Se ha conectado el cliente");
-        
-        long startTime = System.nanoTime();
-        int cantidadPalabras = contadorPalabrasService.contarPalabras(texto);
-        long endTime = System.nanoTime();
-        double tiempoEjecucion = (endTime - startTime) / 1_000_000.0; // Convertir a milisegundos
-
-        txaFinalParalelo.setText("Cantidad de palabras: " + cantidadPalabras + "\n");
-        txaFinalParalelo.append("Tiempo de ejecución: " + new DecimalFormat("#0.00").format(tiempoEjecucion) + " ms");
-    } catch (Exception e) {
-        System.err.println("Error en el cliente RMI: " + e.toString());
-    }
-}
+   
     
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -220,7 +198,9 @@ public class vista extends javax.swing.JFrame {
     }//GEN-LAST:event_btnConcurrenteActionPerformed
 
     private void btnParaleloActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnParaleloActionPerformed
-     contarPalabrasRMI();
+     String texto = txaPrincipal.getText();
+    ClienteRMI clienteRMI = new ClienteRMI(text ,txaFinalParalelo1);
+    clienteRMI.conectarServidorRMI(text ,txaFinalParalelo1);
     }//GEN-LAST:event_btnParaleloActionPerformed
  
  

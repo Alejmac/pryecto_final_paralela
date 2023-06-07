@@ -10,12 +10,15 @@ package contadordepalabras;
  */
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-
+import javax.swing.JTextArea;
 
 public class ContadorPalabrasServer {
     public static void main(String[] args) {
         try {
-            ContadorPalabrasService contadorPalabrasService = new ContadorPalabrasServiceImpl();
+            // Crea un objeto JTextArea para pasar al constructor de ContadorPalabrasServiceImpl
+            JTextArea txaFinal = new JTextArea();
+
+            ContadorPalabrasService contadorPalabrasService = new ContadorPalabrasServiceImpl(txaFinal);
             Registry registry = LocateRegistry.createRegistry(1099);
             registry.rebind("ContadorPalabrasService", contadorPalabrasService);
             System.out.println("Servidor RMI listo.");
