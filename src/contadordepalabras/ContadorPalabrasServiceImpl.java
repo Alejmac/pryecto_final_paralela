@@ -10,45 +10,64 @@ package contadordepalabras;
  */
  import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+ import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
-public class ContadorPalabrasServiceImpl extends UnicastRemoteObject implements ContadorPalabrasService {
+ public class ContadorPalabrasServiceImpl extends UnicastRemoteObject implements ContadorPalabrasService {
     public ContadorPalabrasServiceImpl() throws RemoteException {
         super();
     }
 
     @Override
     public int contarPalabras(String texto) throws RemoteException {
-     if (texto != null) {
-            // Dividir el texto en partes para procesarlo en paralelo
+        if (texto != null) {
             int numThreads = Runtime.getRuntime().availableProcessors();
             int chunkSize = texto.length() / numThreads;
-            WordCountThread[] threads = new WordCountThread[numThreads];
+
+            ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
 
             int startIndex = 0;
             int endIndex = chunkSize;
 
-            // Crear y ejecutar los threads para contar las palabras en paralelo
+            List<Future<Integer>> results = new ArrayList<>();
+
+            // Crear y ejecutar las tareas para contar las palabras en paralelo
             for (int i = 0; i < numThreads; i++) {
                 if (i == numThreads - 1) {
                     // El último thread procesa el resto del texto
                     endIndex = texto.length();
                 }
 
-                threads[i] = new WordCountThread(texto.substring(startIndex, endIndex));
-                threads[i].start();
+                String subText = texto.substring(startIndex, endIndex);
+                WordCountTask task = new WordCountTask(subText);
+                Future<Integer> result = executorService.submit(task);
+                results.add(result);
 
                 startIndex = endIndex;
                 endIndex += chunkSize;
             }
 
+            executorService.shutdown();
+
+            try {
+                executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
             int totalWords = 0;
 
-            // Esperar a que todos los threads terminen y obtener el resultado
-            for (int i = 0; i < numThreads; i++) {
+            // Obtener los resultados de las tareas completadas
+            for (Future<Integer> result : results) {
                 try {
-                    threads[i].join();
-                    totalWords += threads[i].getWordCount();
-                } catch (InterruptedException e) {
+                    totalWords += result.get();
+                } catch (InterruptedException | ExecutionException e) {
                     e.printStackTrace();
                 }
             }
@@ -59,25 +78,21 @@ public class ContadorPalabrasServiceImpl extends UnicastRemoteObject implements 
         return 0;
     }
 
-    private static class WordCountThread extends Thread {
+    private static class WordCountTask implements Callable<Integer> {
         private String text;
-        private int wordCount;
 
-        public WordCountThread(String text) {
+        public WordCountTask(String text) {
             this.text = text;
-            this.wordCount = 0;
-        }
-
-        public int getWordCount() {
-            return wordCount;
         }
 
         @Override
-        public void run() {
+        public Integer call() throws Exception {
             if (text != null) {
                 String[] words = text.trim().split("\\s+");
-                wordCount = words.length;
+                return words.length;
             }
+
+            return 0;
         }
     }
 }

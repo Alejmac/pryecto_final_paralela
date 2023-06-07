@@ -16,6 +16,8 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
 public class vista extends javax.swing.JFrame {
+    // Agrega una variable para almacenar el estado de la conexión del cliente
+    private boolean clienteConectado = false;
       private JTextArea txaPrincipal1;
     private JButton btnSecuencial1;
     private JTextArea txaFinalSecuencial1;
@@ -57,12 +59,12 @@ public class vista extends javax.swing.JFrame {
         String texto = this.txaPrincipal.getText();
 
         // Obtener el registro RMI en la máquina remota
-        Registry registry = LocateRegistry.getRegistry("192.168.84.215", 1099);
+        Registry registry = LocateRegistry.getRegistry("192.168.100.157", 1099);
 
         // Buscar el servicio de contador de palabras registrado en el registro RMI
         ContadorPalabrasService contadorPalabrasService = (ContadorPalabrasService) registry.lookup("ContadorPalabrasService");
-        // Añadir un mensaje de conexión del cliente
-        System.out.println("Se ha conectado el cliente");
+        clienteConectado = true;  // Actualizar el estado de conexión del cliente
+            System.out.println("Se ha conectado el cliente");
         
         long startTime = System.nanoTime();
         int cantidadPalabras = contadorPalabrasService.contarPalabras(texto);
